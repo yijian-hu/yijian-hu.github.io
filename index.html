@@ -10,7 +10,7 @@
 <title>Yijian Hu Portfolio</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Permanent+Marker&family=Epilogue:wght@400;500;700&family=Space+Mono:wght@400;700&family=Tilt+Neon&family=VT323&family=Rock+Salt&family=Sedgwick+Ave+Display&family=Rubik+Wet+Paint&family=Abril+Fatface&family=Rubik+Mono+One&family=Courier+Prime:wght@700&family=Bodoni+Moda:ital,wght@1,800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Permanent+Marker&family=Epilogue:wght@400;500;700&family=Space+Mono:wght@400;700&family=Tilt+Neon&family=VT323&family=Rock+Salt&family=Abril+Fatface&family=Rubik+Mono+One&family=Courier+Prime:wght@700&family=Bodoni+Moda:ital,wght@1,800&display=swap">
 <style>
 /* Layout: one portfolio, three skins. Hero (name + original character) -> wall of draggable prints -> one page per project.
    ZINE = punk cut-out poster. NEON = painted underground city. 999 = late-night terminal emo. */
@@ -712,70 +712,19 @@ canvas.bolt,canvas.pcloud{position:absolute;inset:0;width:100%;height:100%;point
   const walls=[...document.querySelectorAll('canvas.wall')];
   const TAGS=['stay up','no signal','ghost frames','hold on','3:33 am','rec ●','lucid','don\'t fade out','999+','night shift','yjh','film × code','24 fps','no sleep'];
   const layers=[];
-  /* spray-painted tag: dark outline, neon fill, overspray glow, paint drips and splatter */
-  function sprayTag(txt,size,col,font,r,dpr){
-    const m=document.createElement('canvas').getContext('2d'); m.font=`${size}px ${font}`;
-    const tw=m.measureText(txt).width, pad=size*.7, w=tw+pad*2, h=size*2.9;
-    const sp=document.createElement('canvas'); sp.width=Math.ceil(w*dpr); sp.height=Math.ceil(h*dpr);
-    const c=sp.getContext('2d'); c.scale(dpr,dpr); c.font=`${size}px ${font}`; c.textBaseline='middle'; c.lineJoin='round';
-    const x0=pad, y0=size*1.05;
-    c.save(); c.shadowColor=`rgba(${col},.9)`; c.shadowBlur=size*.45; c.fillStyle=`rgba(${col},.55)`; c.fillText(txt,x0,y0); c.restore();
-    c.strokeStyle='#07030d'; c.lineWidth=size*.13; c.strokeText(txt,x0,y0);
-    const g=c.createLinearGradient(0,y0-size*.6,0,y0+size*.6); g.addColorStop(0,'rgba(255,255,255,.95)'); g.addColorStop(.35,`rgb(${col})`); g.addColorStop(1,`rgb(${col})`);
-    c.fillStyle=g; c.fillText(txt,x0,y0);
-    c.strokeStyle='rgba(255,255,255,.55)'; c.lineWidth=Math.max(1,size*.02); c.strokeText(txt,x0-size*.03,y0-size*.03);
-    // drips from the lowest painted pixel of random columns
-    const id=c.getImageData(0,0,sp.width,sp.height).data, SW=sp.width;
-    const nd=3+(r()*5|0); c.strokeStyle=`rgb(${col})`; c.fillStyle=`rgb(${col})`; c.lineCap='round';
-    for(let k=0;k<nd;k++){ const xd=x0+r()*tw, px=Math.round(xd*dpr); let low=-1;
-      for(let py=Math.round((y0+size*.9)*dpr);py>Math.round((y0-size*.2)*dpr);py--){ if(id[(py*SW+px)*4+3]>200){low=py/dpr;break} }
-      if(low<0) continue; const len=size*(.25+r()*r()*1.4), lw=Math.max(1.5,size*(.03+r()*.05));
-      c.lineWidth=lw; c.beginPath(); c.moveTo(xd,low-2); c.lineTo(xd,low+len); c.stroke();
-      c.beginPath(); c.arc(xd,low+len,lw*.85,0,7); c.fill(); }
-    // splatter
-    const ns=18+(r()*30|0);
-    for(let k=0;k<ns;k++){ const a=r()*6.283, d=(r()+r()+r())/3*Math.max(tw,size)*.75; const sx=x0+tw/2+Math.cos(a)*d, sy=y0+Math.sin(a)*d*.55;
-      c.globalAlpha=.4+r()*.6; c.beginPath(); c.arc(sx,sy,.6+r()*r()*size*.07,0,7); c.fill(); }
-    c.globalAlpha=1;
-    return {sp,w,h};
-  }
-  /* background spray burst: overspray cloud, radial streaks, a few drips */
-  function sprayBurst(rad,cols,r,dpr){
-    const S=rad*2.6, sp=document.createElement('canvas'); sp.width=Math.ceil(S*dpr); sp.height=Math.ceil(S*dpr);
-    const c=sp.getContext('2d'); c.scale(dpr,dpr); const cx=S/2, cy=S*.45;
-    for(const col of cols){ const n=rad*14;
-      for(let i=0;i<n;i++){ const a=r()*6.283, d=Math.abs((r()+r()+r()+r())/4-.5)*2*rad; c.fillStyle=`rgba(${col},${.05+r()*.25})`;
-        c.fillRect(cx+Math.cos(a)*d+(r()-.5)*rad*.3, cy+Math.sin(a)*d+(r()-.5)*rad*.3, 1+r()*1.6, 1+r()*1.6); } }
-    c.lineCap='round';
-    for(let i=0;i<34;i++){ const a=r()*6.283, l0=rad*(.1+r()*.3), l1=rad*(.6+r()*.9), col=cols[r()*cols.length|0];
-      const gr=c.createLinearGradient(cx+Math.cos(a)*l0,cy+Math.sin(a)*l0,cx+Math.cos(a)*l1,cy+Math.sin(a)*l1);
-      gr.addColorStop(0,`rgba(${col},.8)`); gr.addColorStop(1,`rgba(${col},0)`); c.strokeStyle=gr; c.lineWidth=1+r()*rad*.05;
-      c.beginPath(); c.moveTo(cx+Math.cos(a)*l0,cy+Math.sin(a)*l0); c.lineTo(cx+Math.cos(a)*l1,cy+Math.sin(a)*l1); c.stroke(); }
-    const core=c.createRadialGradient(cx,cy,0,cx,cy,rad*.35); core.addColorStop(0,'rgba(255,255,255,.7)'); core.addColorStop(.3,`rgba(${cols[0]},.5)`); core.addColorStop(1,`rgba(${cols[0]},0)`);
-    c.fillStyle=core; c.fillRect(0,0,S,S);
-    for(let i=0;i<5;i++){ const col=cols[r()*cols.length|0], x=cx+(r()-.5)*rad*.9, y=cy+rad*(.1+r()*.3), len=rad*(.3+r()*.8), lw=1.5+r()*3;
-      c.strokeStyle=`rgba(${col},.75)`; c.fillStyle=`rgba(${col},.75)`; c.lineWidth=lw; c.beginPath(); c.moveTo(x,y); c.lineTo(x,y+len); c.stroke(); c.beginPath(); c.arc(x,y+len,lw*.9,0,7); c.fill(); }
-    return {sp,w:S,h:S};
-  }
   function makeTagLayer(host,seed,count){
     let tw=host.querySelector(':scope > canvas.tagwave');
     if(!tw){tw=document.createElement('canvas');tw.className='tagwave';tw.setAttribute('aria-hidden','true');const w=host.querySelector(':scope > canvas.wall');w?w.after(tw):host.prepend(tw)}
     const r=rng(seed), dpr=Math.min(devicePixelRatio||1,2), W=tw.clientWidth, H=tw.clientHeight; if(!W||!H) return;
     tw.width=W*dpr; tw.height=H*dpr;
-    const tags=[], is999=body.dataset.v==='999';
-    const PALS=[['255,77,141','111,214,255'],['180,107,255','255,77,141'],['111,214,255','180,107,255','233,255,59']];
-    if(is999){ const nb=Math.max(1,Math.round(count/4));
-      for(let k=0;k<nb;k++){ const rad=90+r()*150, s=sprayBurst(rad,PALS[r()*PALS.length|0],r,dpr);
-        tags.push({sp:s.sp,w:s.w,h:s.h,x:r()*W,y:r()*H,vx:(r()-.5)*.08,vy:(r()-.5)*.06,rot:r()*6.28,ph:r()*6.28,a:.22+r()*.18,burst:1}); } }
+    const tags=[];
     for(let k=0;k<count;k++){
-      const txt=TAGS[r()*TAGS.length|0], col=r()<.5?'255,77,141':(r()<.5?'111,214,255':'180,107,255');
-      let s, size;
-      if(is999){ const wet=r()<.25; size=wet?28+r()*40:36+r()*74; s=sprayTag(txt,size,col,wet?'"Rubik Wet Paint", cursive':'"Sedgwick Ave Display", cursive',r,dpr); }
-      else { size=30+r()*70; const m=document.createElement('canvas').getContext('2d'); m.font=`${size}px "Rock Salt", cursive`; const tw2=m.measureText(txt).width+20;
-        const sp=document.createElement('canvas'); sp.width=Math.ceil(tw2*dpr); sp.height=Math.ceil(size*1.9*dpr);
-        const sc=sp.getContext('2d'); sc.scale(dpr,dpr); sc.font=`${size}px "Rock Salt", cursive`; sc.textBaseline='middle'; sc.fillStyle=`rgb(${col})`; sc.fillText(txt,10,size*.95); s={sp,w:tw2,h:size*1.9}; }
+      const txt=TAGS[r()*TAGS.length|0], size=30+r()*70, col=r()<.5?'255,77,141':(r()<.5?'232,226,242':'180,107,255');
+      const m=document.createElement('canvas').getContext('2d'); m.font=`${size}px "Rock Salt", cursive`; const tw2=m.measureText(txt).width+20;
+      const sp=document.createElement('canvas'); sp.width=Math.ceil(tw2*dpr); sp.height=Math.ceil(size*1.9*dpr);
+      const sc=sp.getContext('2d'); sc.scale(dpr,dpr); sc.font=`${size}px "Rock Salt", cursive`; sc.textBaseline='middle'; sc.fillStyle=`rgb(${col})`; sc.fillText(txt,10,size*.95);
       const ang=r()*6.283, speed=.12+r()*.35;
-      tags.push({sp:s.sp,w:s.w,h:s.h,x:r()*W,y:r()*H,vx:Math.cos(ang)*speed,vy:Math.sin(ang)*speed*.6,rot:(r()-.5)*.5,ph:r()*6.28,a:is999?.28+r()*.3:.12+r()*.2});
+      tags.push({sp,w:tw2,h:size*1.9,x:r()*W,y:r()*H,vx:Math.cos(ang)*speed,vy:Math.sin(ang)*speed*.6,rot:(r()-.5)*.5,ph:r()*6.28,a:.12+r()*.2});
     }
     const L={tw,tags,W,H,dpr,vis:true}; layers.push(L);
     new IntersectionObserver(es=>{L.vis=es[0].isIntersecting}).observe(tw);
@@ -812,7 +761,7 @@ canvas.bolt,canvas.pcloud{position:absolute;inset:0;width:100%;height:100%;point
   let start='999';
   if(!P[start]) start='zine';
   setV(start);
-  (document.fonts?Promise.all([document.fonts.ready,document.fonts.load('40px "Rubik Wet Paint"'),document.fonts.load('40px "Sedgwick Ave Display"')]).catch(()=>0):Promise.resolve()).then(()=>{paintAll(); if(body.dataset.v==='999') renderChar('999');});
+  (document.fonts&&document.fonts.ready||Promise.resolve()).then(()=>{paintAll(); if(body.dataset.v==='999') renderChar('999');});
   let lw=innerWidth; addEventListener('resize',()=>{if(Math.abs(innerWidth-lw)>40){lw=innerWidth;paintAll()}});
 
   /* ---------- portal jump ---------- */
