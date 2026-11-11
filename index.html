@@ -10,7 +10,7 @@
 <title>Yijian Hu Portfolio</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Permanent+Marker&family=Epilogue:wght@400;500;700&family=Space+Mono:wght@400;700&family=Tilt+Neon&family=VT323&family=Rock+Salt&family=Abril+Fatface&family=Rubik+Mono+One&family=Courier+Prime:wght@700&family=Bodoni+Moda:ital,wght@1,800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Permanent+Marker&family=Epilogue:wght@400;500;700&family=Space+Mono:wght@400;700&family=Tilt+Neon&family=VT323&family=Rock+Salt&family=Sedgwick+Ave+Display&family=Rubik+Wet+Paint&family=Abril+Fatface&family=Rubik+Mono+One&family=Courier+Prime:wght@700&family=Bodoni+Moda:ital,wght@1,800&display=swap">
 <style>
 /* Layout: one portfolio, three skins. Hero (name + original character) -> wall of draggable prints -> one page per project.
    ZINE = punk cut-out poster. NEON = painted underground city. 999 = late-night terminal emo. */
@@ -22,7 +22,7 @@
   color-scheme:dark;
 }
 body[data-v="neon"]{--bg:#06050b;--bg2:#0c0a16;--a1:#ff3fb4;--a2:#3ef2ff;--a3:#b18cff;--display:"Tilt Neon","Anton",sans-serif;--hand:"Permanent Marker",cursive}
-body[data-v="999"]{--bg:#08040f;--bg2:#100819;--fg:#e8e2f2;--muted:#9184a8;--a1:#b46bff;--a2:#ff4d8d;--a3:#6fd6ff;--display:"VT323",ui-monospace,monospace;--hand:"Rock Salt","Marker Felt",cursive}
+body[data-v="999"]{--bg:#08040f;--bg2:#100819;--fg:#e8e2f2;--muted:#9184a8;--a1:#b46bff;--a2:#ff4d8d;--a3:#6fd6ff;--display:"VT323",ui-monospace,monospace;--hand:"Sedgwick Ave Display","Rock Salt",cursive}
 *{box-sizing:border-box}
 html{scroll-behavior:auto}
 body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.55;overflow-x:hidden}
@@ -359,6 +359,7 @@ canvas.bolt,canvas.pcloud{position:absolute;inset:0;width:100%;height:100%;point
 
 </head>
 <body>
+<canvas id="bggl" aria-hidden="true"></canvas>
 <header class="bar wrap">
   <div class="inner">
     <a class="logo" href="#top" data-go>yijian hu</a>
@@ -711,19 +712,70 @@ canvas.bolt,canvas.pcloud{position:absolute;inset:0;width:100%;height:100%;point
   const walls=[...document.querySelectorAll('canvas.wall')];
   const TAGS=['stay up','no signal','ghost frames','hold on','3:33 am','rec ●','lucid','don\'t fade out','999+','night shift','yjh','film × code','24 fps','no sleep'];
   const layers=[];
+  /* spray-painted tag: dark outline, neon fill, overspray glow, paint drips and splatter */
+  function sprayTag(txt,size,col,font,r,dpr){
+    const m=document.createElement('canvas').getContext('2d'); m.font=`${size}px ${font}`;
+    const tw=m.measureText(txt).width, pad=size*.7, w=tw+pad*2, h=size*2.9;
+    const sp=document.createElement('canvas'); sp.width=Math.ceil(w*dpr); sp.height=Math.ceil(h*dpr);
+    const c=sp.getContext('2d'); c.scale(dpr,dpr); c.font=`${size}px ${font}`; c.textBaseline='middle'; c.lineJoin='round';
+    const x0=pad, y0=size*1.05;
+    c.save(); c.shadowColor=`rgba(${col},.9)`; c.shadowBlur=size*.45; c.fillStyle=`rgba(${col},.55)`; c.fillText(txt,x0,y0); c.restore();
+    c.strokeStyle='#07030d'; c.lineWidth=size*.13; c.strokeText(txt,x0,y0);
+    const g=c.createLinearGradient(0,y0-size*.6,0,y0+size*.6); g.addColorStop(0,'rgba(255,255,255,.95)'); g.addColorStop(.35,`rgb(${col})`); g.addColorStop(1,`rgb(${col})`);
+    c.fillStyle=g; c.fillText(txt,x0,y0);
+    c.strokeStyle='rgba(255,255,255,.55)'; c.lineWidth=Math.max(1,size*.02); c.strokeText(txt,x0-size*.03,y0-size*.03);
+    // drips from the lowest painted pixel of random columns
+    const id=c.getImageData(0,0,sp.width,sp.height).data, SW=sp.width;
+    const nd=3+(r()*5|0); c.strokeStyle=`rgb(${col})`; c.fillStyle=`rgb(${col})`; c.lineCap='round';
+    for(let k=0;k<nd;k++){ const xd=x0+r()*tw, px=Math.round(xd*dpr); let low=-1;
+      for(let py=Math.round((y0+size*.9)*dpr);py>Math.round((y0-size*.2)*dpr);py--){ if(id[(py*SW+px)*4+3]>200){low=py/dpr;break} }
+      if(low<0) continue; const len=size*(.25+r()*r()*1.4), lw=Math.max(1.5,size*(.03+r()*.05));
+      c.lineWidth=lw; c.beginPath(); c.moveTo(xd,low-2); c.lineTo(xd,low+len); c.stroke();
+      c.beginPath(); c.arc(xd,low+len,lw*.85,0,7); c.fill(); }
+    // splatter
+    const ns=18+(r()*30|0);
+    for(let k=0;k<ns;k++){ const a=r()*6.283, d=(r()+r()+r())/3*Math.max(tw,size)*.75; const sx=x0+tw/2+Math.cos(a)*d, sy=y0+Math.sin(a)*d*.55;
+      c.globalAlpha=.4+r()*.6; c.beginPath(); c.arc(sx,sy,.6+r()*r()*size*.07,0,7); c.fill(); }
+    c.globalAlpha=1;
+    return {sp,w,h};
+  }
+  /* background spray burst: overspray cloud, radial streaks, a few drips */
+  function sprayBurst(rad,cols,r,dpr){
+    const S=rad*2.6, sp=document.createElement('canvas'); sp.width=Math.ceil(S*dpr); sp.height=Math.ceil(S*dpr);
+    const c=sp.getContext('2d'); c.scale(dpr,dpr); const cx=S/2, cy=S*.45;
+    for(const col of cols){ const n=rad*14;
+      for(let i=0;i<n;i++){ const a=r()*6.283, d=Math.abs((r()+r()+r()+r())/4-.5)*2*rad; c.fillStyle=`rgba(${col},${.05+r()*.25})`;
+        c.fillRect(cx+Math.cos(a)*d+(r()-.5)*rad*.3, cy+Math.sin(a)*d+(r()-.5)*rad*.3, 1+r()*1.6, 1+r()*1.6); } }
+    c.lineCap='round';
+    for(let i=0;i<34;i++){ const a=r()*6.283, l0=rad*(.1+r()*.3), l1=rad*(.6+r()*.9), col=cols[r()*cols.length|0];
+      const gr=c.createLinearGradient(cx+Math.cos(a)*l0,cy+Math.sin(a)*l0,cx+Math.cos(a)*l1,cy+Math.sin(a)*l1);
+      gr.addColorStop(0,`rgba(${col},.8)`); gr.addColorStop(1,`rgba(${col},0)`); c.strokeStyle=gr; c.lineWidth=1+r()*rad*.05;
+      c.beginPath(); c.moveTo(cx+Math.cos(a)*l0,cy+Math.sin(a)*l0); c.lineTo(cx+Math.cos(a)*l1,cy+Math.sin(a)*l1); c.stroke(); }
+    const core=c.createRadialGradient(cx,cy,0,cx,cy,rad*.35); core.addColorStop(0,'rgba(255,255,255,.7)'); core.addColorStop(.3,`rgba(${cols[0]},.5)`); core.addColorStop(1,`rgba(${cols[0]},0)`);
+    c.fillStyle=core; c.fillRect(0,0,S,S);
+    for(let i=0;i<5;i++){ const col=cols[r()*cols.length|0], x=cx+(r()-.5)*rad*.9, y=cy+rad*(.1+r()*.3), len=rad*(.3+r()*.8), lw=1.5+r()*3;
+      c.strokeStyle=`rgba(${col},.75)`; c.fillStyle=`rgba(${col},.75)`; c.lineWidth=lw; c.beginPath(); c.moveTo(x,y); c.lineTo(x,y+len); c.stroke(); c.beginPath(); c.arc(x,y+len,lw*.9,0,7); c.fill(); }
+    return {sp,w:S,h:S};
+  }
   function makeTagLayer(host,seed,count){
     let tw=host.querySelector(':scope > canvas.tagwave');
     if(!tw){tw=document.createElement('canvas');tw.className='tagwave';tw.setAttribute('aria-hidden','true');const w=host.querySelector(':scope > canvas.wall');w?w.after(tw):host.prepend(tw)}
     const r=rng(seed), dpr=Math.min(devicePixelRatio||1,2), W=tw.clientWidth, H=tw.clientHeight; if(!W||!H) return;
     tw.width=W*dpr; tw.height=H*dpr;
-    const tags=[];
+    const tags=[], is999=body.dataset.v==='999';
+    const PALS=[['255,77,141','111,214,255'],['180,107,255','255,77,141'],['111,214,255','180,107,255','233,255,59']];
+    if(is999){ const nb=Math.max(1,Math.round(count/4));
+      for(let k=0;k<nb;k++){ const rad=90+r()*150, s=sprayBurst(rad,PALS[r()*PALS.length|0],r,dpr);
+        tags.push({sp:s.sp,w:s.w,h:s.h,x:r()*W,y:r()*H,vx:(r()-.5)*.08,vy:(r()-.5)*.06,rot:r()*6.28,ph:r()*6.28,a:.22+r()*.18,burst:1}); } }
     for(let k=0;k<count;k++){
-      const txt=TAGS[r()*TAGS.length|0], size=30+r()*70, col=r()<.5?'255,77,141':(r()<.5?'232,226,242':'180,107,255');
-      const m=document.createElement('canvas').getContext('2d'); m.font=`${size}px "Rock Salt", cursive`; const tw2=m.measureText(txt).width+20;
-      const sp=document.createElement('canvas'); sp.width=Math.ceil(tw2*dpr); sp.height=Math.ceil(size*1.9*dpr);
-      const sc=sp.getContext('2d'); sc.scale(dpr,dpr); sc.font=`${size}px "Rock Salt", cursive`; sc.textBaseline='middle'; sc.fillStyle=`rgb(${col})`; sc.fillText(txt,10,size*.95);
+      const txt=TAGS[r()*TAGS.length|0], col=r()<.5?'255,77,141':(r()<.5?'111,214,255':'180,107,255');
+      let s, size;
+      if(is999){ const wet=r()<.25; size=wet?28+r()*40:36+r()*74; s=sprayTag(txt,size,col,wet?'"Rubik Wet Paint", cursive':'"Sedgwick Ave Display", cursive',r,dpr); }
+      else { size=30+r()*70; const m=document.createElement('canvas').getContext('2d'); m.font=`${size}px "Rock Salt", cursive`; const tw2=m.measureText(txt).width+20;
+        const sp=document.createElement('canvas'); sp.width=Math.ceil(tw2*dpr); sp.height=Math.ceil(size*1.9*dpr);
+        const sc=sp.getContext('2d'); sc.scale(dpr,dpr); sc.font=`${size}px "Rock Salt", cursive`; sc.textBaseline='middle'; sc.fillStyle=`rgb(${col})`; sc.fillText(txt,10,size*.95); s={sp,w:tw2,h:size*1.9}; }
       const ang=r()*6.283, speed=.12+r()*.35;
-      tags.push({sp,w:tw2,h:size*1.9,x:r()*W,y:r()*H,vx:Math.cos(ang)*speed,vy:Math.sin(ang)*speed*.6,rot:(r()-.5)*.5,ph:r()*6.28,a:.12+r()*.2});
+      tags.push({sp:s.sp,w:s.w,h:s.h,x:r()*W,y:r()*H,vx:Math.cos(ang)*speed,vy:Math.sin(ang)*speed*.6,rot:(r()-.5)*.5,ph:r()*6.28,a:is999?.28+r()*.3:.12+r()*.2});
     }
     const L={tw,tags,W,H,dpr,vis:true}; layers.push(L);
     new IntersectionObserver(es=>{L.vis=es[0].isIntersecting}).observe(tw);
@@ -760,7 +812,7 @@ canvas.bolt,canvas.pcloud{position:absolute;inset:0;width:100%;height:100%;point
   let start='999';
   if(!P[start]) start='zine';
   setV(start);
-  (document.fonts&&document.fonts.ready||Promise.resolve()).then(()=>{paintAll(); if(body.dataset.v==='999') renderChar('999');});
+  (document.fonts?Promise.all([document.fonts.ready,document.fonts.load('40px "Rubik Wet Paint"'),document.fonts.load('40px "Sedgwick Ave Display"')]).catch(()=>0):Promise.resolve()).then(()=>{paintAll(); if(body.dataset.v==='999') renderChar('999');});
   let lw=innerWidth; addEventListener('resize',()=>{if(Math.abs(innerWidth-lw)>40){lw=innerWidth;paintAll()}});
 
   /* ---------- portal jump ---------- */
@@ -1155,6 +1207,162 @@ canvas.bolt,canvas.pcloud{position:absolute;inset:0;width:100%;height:100%;point
 @keyframes hum{0%,100%{opacity:1}62%{opacity:1}63%{opacity:.55}64%{opacity:1}}
 @media (prefers-reduced-motion:reduce){.char-neon{animation:none}}
 </style>
+
+<style>
+/* ---------- live WebGL background (999 skin): flowing nebula rendered as ASCII, searchlights, data rain, a second deeper glyph layer, cursor trail, click shockwaves ---------- */
+#bggl{position:fixed;inset:0;width:100vw;height:100vh;height:100lvh;z-index:0;pointer-events:none;display:none}
+body[data-v="999"] #bggl{display:block}
+body[data-v="999"] .hero,body[data-v="999"] .desk-sec,body[data-v="999"] .proj,body[data-v="999"] .end{background:transparent}
+body[data-v="999"] canvas.wall{display:none}
+body[data-v="999"] .hero::after,body[data-v="999"] .desk-sec::after,body[data-v="999"] .proj::after,body[data-v="999"] .end::after,
+body[data-v="999"] .desk-sec::before,body[data-v="999"] .proj::before,body[data-v="999"] .end::before{display:none}
+body[data-v="999"] canvas.sparks,body[data-v="999"] canvas.tagwave,body[data-v="999"] .fx{-webkit-mask-image:linear-gradient(180deg,transparent,#000 180px,#000 calc(100% - 180px),transparent);mask-image:linear-gradient(180deg,transparent,#000 180px,#000 calc(100% - 180px),transparent)}
+</style>
+<script>
+(function(){
+  const cv=document.getElementById('bggl'); if(!cv) return;
+  const gl=cv.getContext('webgl',{antialias:false,alpha:false,powerPreference:'high-performance'}); if(!gl){cv.remove();return}
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const NT=14, NC=5;
+  const VS='attribute vec2 a;void main(){gl_Position=vec4(a,0.,1.);}';
+  const FS=`precision highp float;
+#define NT ${NT}
+#define NC ${NC}
+uniform vec2 R;uniform float T,S,V,F,CELL,GRID;uniform vec2 ORB;uniform vec3 C1,C2,C3;uniform sampler2D G;
+uniform vec3 TR[NT];uniform vec3 CK[NC];
+float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+1.),f.x),f.y);}
+float fbm(vec2 p){float a=.5,s=0.;for(int i=0;i<5;i++){s+=a*n(p);p=p*2.03+vec2(1.7,9.2);a*=.5;}return s;}
+vec3 field(vec2 p){
+  vec2 q=vec2(fbm(p+vec2(0.,T*.05)),fbm(p+vec2(5.2,1.3)-T*.04));
+  vec2 r=vec2(fbm(p+2.8*q+vec2(1.7,9.2)+T*.06),fbm(p+2.8*q+vec2(8.3,2.8)-T*.03));
+  return vec3(fbm(p+2.6*r),q.x,r.y);
+}
+vec3 pal(vec3 f){vec3 c=mix(C1,C2,smoothstep(.25,.75,f.y));return mix(c,C3,smoothstep(.45,.85,f.z)*.8);}
+// all the things that bend space: cursor trail and shockwaves
+vec2 bend(vec2 u,out float glow,out float ring){
+  vec2 w=vec2(0.);glow=0.;ring=0.;
+  for(int i=0;i<NT;i++){vec2 d=u-TR[i].xy;float e=exp(-dot(d,d)*320.)*TR[i].z;w+=d*e*.9;glow+=e*.8;}
+  for(int i=0;i<NC;i++){float age=T-CK[i].z;if(age>0.&&age<2.6){vec2 d=u-CK[i].xy;float dd=length(d);float k=exp(-pow((dd-age*.85)*22.,2.))*(1.-age/2.6);ring+=k;w+=d/(dd+1e-3)*k*.06;}}
+  return u+w;
+}
+void main(){
+  vec2 fc=gl_FragCoord.xy;fc.y=R.y-fc.y;
+  vec2 cid=floor(fc/CELL);
+  float gl1=h(vec2(cid.y,floor(T*18.)));
+  cid.x+=floor((gl1-.5)*V*30.)*step(1.-V*.9,gl1);            // fast scroll: rows slip sideways
+  vec2 cuv=fract(fc/CELL);
+  float asp=R.x/R.y;
+  vec2 uc=(cid+.5)*CELL/R.y, up=fc/R.y;
+  float glow,ring,gp,rp;
+  vec2 bc=bend(uc,glow,ring), bp=bend(up,gp,rp);
+  float sy=S*.00035;
+  vec3 f=field(bc*1.7+vec2(0.,sy));
+  vec3 fb=field(bp*1.7+vec2(0.,sy));
+  // ---- searchlights sweeping down from the top edge ----
+  float beam=0.;vec3 bcol=vec3(0.);
+  for(int i=0;i<3;i++){float fi=float(i);
+    vec2 o=vec2(asp*(.18+.32*fi)+.08*sin(T*.21+fi*1.7),-.08);
+    float a=sin(T*(.17+.05*fi)+fi*2.1)*.55;vec2 dir=vec2(sin(a),cos(a));
+    vec2 q=up-o;float al=dot(q,dir);float pd=abs(q.x*dir.y-q.y*dir.x);
+    float b=al>0.?exp(-pow(pd/(.012+.11*al),2.))*exp(-al*.9)*(.75+.25*sin(T*1.7+fi)):0.;
+    beam+=b;bcol+=b*(fi==1.?C2:(fi==0.?C3:C1));}
+  // ---- second, larger ascii layer drifting at another depth ----
+  float C2S=CELL*2.6;vec2 fc2=fc+vec2(0.,S*.55);vec2 id2=floor(fc2/C2S);vec2 cu2=fract(fc2/C2S);
+  float f2=fbm((id2+.5)*C2S/R.y*2.4+vec2(T*.03,-T*.05));
+  float v2=smoothstep(.66,.84,f2)*(.5+.5*sin(T*2.+h(id2)*6.28));
+  float i2=floor(clamp(v2,0.,.999)*10.);if(h(id2+floor(T*3.))>.97)i2=floor(h(id2+T)*10.);
+  float g2=texture2D(G,vec2((i2+cu2.x)/10.,cu2.y)).r;
+  // ---- data rain: a few columns pour characters ----
+  float col0=cid.x;float on=step(.9,h(vec2(col0,floor(T*.15+h(vec2(col0,7.))))));
+  float rows=R.y/CELL;float head=fract(T*(.05+.08*h(vec2(col0,3.)))+h(vec2(col0,1.)))*rows*1.5-rows*.25;
+  float dr=head-cid.y;float rain=on*step(0.,dr)*smoothstep(14.,0.,dr);
+  float rhead=on*smoothstep(1.5,0.,abs(dr));
+  // ---- base ----
+  vec3 col=pal(fb)*pow(smoothstep(.3,.95,fb.x),1.8)*.42;
+  col+=bcol*.34;
+  col+=pal(vec3(f2,.3,.9))*g2*v2*.32;
+  // ---- ascii ----
+  float v=smoothstep(.46,.92,f.x);
+  v+=glow*.9+ring*1.4;
+  float scan=exp(-pow((uc.y-(fract(T*.09)*1.6-.3))*22.,2.));
+  v+=scan*.35+F*.9*smoothstep(.4,.9,f.x)+beam*.55+rain*.75;
+  float lv=clamp(v,0.,.999);
+  float idx=floor(lv*10.);
+  if(h(cid+floor(T*6.))>.985||h(cid+floor(T*20.))<scan*.25+ring*.6+rain*.5) idx=floor(h(cid*1.7+T)*10.);
+  float ca=V*.35+ring*.25;
+  float gr=texture2D(G,vec2((idx+clamp(cuv.x+ca,0.,1.))/10.,cuv.y)).r;
+  float gg=texture2D(G,vec2((idx+cuv.x)/10.,cuv.y)).r;
+  float gb=texture2D(G,vec2((idx+clamp(cuv.x-ca,0.,1.))/10.,cuv.y)).r;
+  vec3 gc=pal(f)*(v*v*.95+.04);
+  col+=vec3(gr,gg,gb)*gc+vec3(gr,gg,gb)*(glow*.35+ring*.8)*vec3(.95,.9,1.);
+  col+=vec3(.95,.97,1.)*gg*(F*.6+rhead*.9);
+  // ---- film ----
+  col*=.86+.14*sin(fc.y*3.14159/2.);
+  vec2 uv=fc/R;col*=1.-.55*pow(length(uv-.5)*1.25,2.2);
+  col+=(h(fc+fract(T)*91.)-.5)*.035;
+  col+=vec3(.03,.012,.06);
+  gl_FragColor=vec4(col,1.);
+}`;
+  function sh(t,s){const o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))throw gl.getShaderInfoLog(o);return o}
+  let pr;
+  try{pr=gl.createProgram();gl.attachShader(pr,sh(gl.VERTEX_SHADER,VS));gl.attachShader(pr,sh(gl.FRAGMENT_SHADER,FS));gl.linkProgram(pr);gl.useProgram(pr)}catch(e){console.warn(e);cv.remove();return}
+  const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+  const al=gl.getAttribLocation(pr,'a');gl.enableVertexAttribArray(al);gl.vertexAttribPointer(al,2,gl.FLOAT,false,0,0);
+  const U={};['R','T','S','V','F','CELL','GRID','ORB','C1','C2','C3','G'].forEach(k=>U[k]=gl.getUniformLocation(pr,k));
+  U.TR=gl.getUniformLocation(pr,'TR[0]');U.CK=gl.getUniformLocation(pr,'CK[0]');
+  const tex=gl.createTexture();
+  function atlas(){const cs=' .:-=+*#%@',w=32,hgt=32,a=document.createElement('canvas');a.width=w*10;a.height=hgt;const c=a.getContext('2d');
+    c.fillStyle='#000';c.fillRect(0,0,a.width,hgt);c.fillStyle='#fff';c.font='30px "VT323", ui-monospace, monospace';c.textAlign='center';c.textBaseline='middle';
+    for(let i=0;i<10;i++)c.fillText(cs[i],i*w+w/2,hgt/2+1);
+    gl.bindTexture(gl.TEXTURE_2D,tex);gl.texImage2D(gl.TEXTURE_2D,0,gl.LUMINANCE,gl.LUMINANCE,gl.UNSIGNED_BYTE,a);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);}
+  atlas(); document.fonts&&document.fonts.ready.then(atlas);
+  gl.uniform1i(U.G,0);
+  let W=0,H=0,sc=1;
+  function size(){const mob=innerWidth<700;sc=Math.min(devicePixelRatio||1,2)*(mob?.5:.6);W=Math.round(innerWidth*sc);H=Math.round(innerHeight*sc);cv.width=W;cv.height=H;gl.viewport(0,0,W,H)}
+  size(); let lw=innerWidth,lh=innerHeight; addEventListener('resize',()=>{if(Math.abs(innerWidth-lw)>40||Math.abs(innerHeight-lh)>120){lw=innerWidth;lh=innerHeight;size()}});
+  const C=(a)=>a.map(x=>x/255);
+  const PAL={def:[C([180,107,255]),C([255,77,141]),C([111,214,255])],weather:[C([90,170,255]),C([200,225,255]),C([150,110,255])],
+    muddy:[C([70,200,130]),C([200,190,90]),C([60,170,200])],soli:[C([255,180,60]),C([255,110,50]),C([120,220,255])],
+    signal:[C([255,40,70]),C([170,30,60]),C([90,200,255])],other:[C([180,107,255]),C([255,77,141]),C([111,214,255])]};
+  const secs=[...document.querySelectorAll('.hero,.desk-sec,.proj,.end')];
+  let cur=PAL.def.map(c=>c.slice()),gridAmt=1,tgGrid=1,vel=0,lastY=scrollY,flash=0,nextFlash=0,scrollAcc=scrollY;
+  // cursor trail (normalised to viewport height, y down) and click shockwaves
+  const tr=new Float32Array(NT*3), ck=new Float32Array(NC*3).fill(-99); let ti=0,ci=0,px=-9,py=-9,lastT=0,moved=0;
+  const hist=[]; for(let i=0;i<NT;i++)hist.push([-9,-9,-99]);
+  addEventListener('pointermove',e=>{px=e.clientX/innerHeight;py=e.clientY/innerHeight;moved=1},{passive:true});
+  addEventListener('pointerdown',e=>{ck[ci*3]=e.clientX/innerHeight;ck[ci*3+1]=e.clientY/innerHeight;ck[ci*3+2]=performance.now()/1000;ci=(ci+1)%NC},{passive:true});
+  function target(){const mid=innerHeight/2;for(const s of secs){const r=s.getBoundingClientRect();if(r.top<=mid&&r.bottom>=mid)return s;}return null}
+  let vis=true; document.addEventListener('visibilitychange',()=>{vis=!document.hidden});
+  function frame(now){
+    if(vis&&document.body.dataset.v==='999'){
+      const t=now/1000, y=scrollY, dy=y-lastY; lastY=y;
+      vel+=(Math.min(1,Math.abs(dy)/60)-vel)*.12;
+      scrollAcc+=(y-scrollAcc)*.12;
+      if(moved&&t-lastT>.03){hist[ti]=[px,py,t];ti=(ti+1)%NT;lastT=t;moved=0}
+      for(let i=0;i<NT;i++){const hh=hist[i];tr[i*3]=hh[0];tr[i*3+1]=hh[1];tr[i*3+2]=Math.max(0,1-(t-hh[2])/.9)*.9}
+      const s=target(), tg=(s&&PAL[s.id])||PAL.def;
+      tgGrid=(!s||s.classList.contains('hero')||s.classList.contains('end'))?1:.35;
+      gridAmt+=(tgGrid-gridAmt)*.04;
+      for(let i=0;i<3;i++)for(let k=0;k<3;k++)cur[i][k]+=(tg[i][k]-cur[i][k])*.04;
+      if(tg===PAL.weather&&t>nextFlash){flash=1;nextFlash=t+3+Math.random()*5}
+      flash*=.9; const fl=flash>.05?flash*(.6+.4*Math.sin(t*60)):0;
+      const asp=innerWidth/innerHeight, ss=scrollAcc/innerHeight;
+      const ox=asp*(.5+.3*Math.sin(ss*.9+.9)), oy=.36+.1*Math.cos(ss*1.3);
+      gl.uniform2f(U.R,W,H);gl.uniform1f(U.T,reduce?12.:t);gl.uniform1f(U.S,scrollAcc*sc);gl.uniform1f(U.V,reduce?0:vel);gl.uniform1f(U.F,reduce?0:fl);
+      gl.uniform1f(U.CELL,Math.max(6,Math.round(13*sc)));gl.uniform1f(U.GRID,gridAmt);gl.uniform2f(U.ORB,ox,oy);
+      gl.uniform3fv(U.TR,tr);gl.uniform3fv(U.CK,ck);
+      gl.uniform3fv(U.C1,cur[0]);gl.uniform3fv(U.C2,cur[1]);gl.uniform3fv(U.C3,cur[2]);
+      gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,tex);
+      gl.drawArrays(gl.TRIANGLES,0,3);
+    }
+    if(!reduce||!frame.once){frame.once=1;requestAnimationFrame(frame)}
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
 
 </body>
 </html>
