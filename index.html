@@ -1242,7 +1242,7 @@ vec3 pal(vec3 f){vec3 c=mix(C1,C2,smoothstep(.25,.75,f.y));return mix(c,C3,smoot
 // all the things that bend space: cursor trail and shockwaves
 vec2 bend(vec2 u,out float glow,out float ring){
   vec2 w=vec2(0.);glow=0.;ring=0.;
-  for(int i=0;i<NT;i++){vec2 d=u-TR[i].xy;float e=exp(-dot(d,d)*320.)*TR[i].z;w+=d*e*.9;glow+=e*.8;}
+  for(int i=0;i<NT;i++){vec2 d=u-TR[i].xy;float e=exp(-dot(d,d)*320.)*TR[i].z;w+=d*e*.6;}
   for(int i=0;i<NC;i++){float age=T-CK[i].z;if(age>0.&&age<2.6){vec2 d=u-CK[i].xy;float dd=length(d);float k=exp(-pow((dd-age*.85)*22.,2.))*(1.-age/2.6);ring+=k;w+=d/(dd+1e-3)*k*.06;}}
   return u+w;
 }
@@ -1359,6 +1359,69 @@ void main(){
       gl.drawArrays(gl.TRIANGLES,0,3);
     }
     if(!reduce||!frame.once){frame.once=1;requestAnimationFrame(frame)}
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+<style>
+/* ---------- cursor: wildstyle shard trail (999 skin) ---------- */
+#shards{position:fixed;inset:0;width:100vw;height:100vh;z-index:45;pointer-events:none;display:none}
+body[data-v="999"] #shards{display:block}
+</style>
+<script>
+(function(){
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const cv=document.createElement('canvas'); cv.id='shards'; cv.setAttribute('aria-hidden','true'); document.body.appendChild(cv);
+  const c=cv.getContext('2d'); let W=0,H=0,dpr=1;
+  function size(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*dpr;cv.height=H*dpr;c.setTransform(dpr,0,0,dpr,0,0)}
+  size(); addEventListener('resize',size);
+  // halftone dot pattern for the shard faces
+  const pc=document.createElement('canvas'); pc.width=pc.height=7; const px=pc.getContext('2d');
+  px.fillStyle='rgba(255,255,255,.38)'; px.beginPath(); px.arc(3.5,3.5,1.35,0,7); px.fill();
+  const dots=c.createPattern(pc,'repeat');
+  const FILL=['#2f2cff','#7b2dff','#a63bff','#ff2d6f','#ff3b3b','#3a7bff'];
+  const EDGE=['#5ff3ff','#b9a6ff','#ff9ad1'];
+  const P=[]; const MAX=240;
+  function spawn(x,y,vx,vy,burst){
+    if(P.length>=MAX) P.shift();
+    const n=3+(Math.random()<.35?1:0), base=(burst?10:6)+Math.random()*(burst?26:20);
+    const dir=Math.atan2(vy,vx), stretch=1.3+Math.min(1.6,Math.hypot(vx,vy)*.04);
+    const pts=[]; for(let i=0;i<n;i++){const a=(i/n)*6.283+Math.random()*.9;const r=base*(.45+Math.random()*.75);
+      const lx=Math.cos(a)*r*stretch, ly=Math.sin(a)*r; pts.push([lx*Math.cos(dir)-ly*Math.sin(dir), lx*Math.sin(dir)+ly*Math.cos(dir)])}
+    const sp=burst?2.5+Math.random()*6:.6+Math.random()*1.8, ang=burst?Math.random()*6.283:dir+Math.PI+(Math.random()-.5)*1.6;
+    P.push({x,y,vx:Math.cos(ang)*sp+vx*.08,vy:Math.sin(ang)*sp+vy*.08,rot:0,vr:(Math.random()-.5)*.18,pts,
+      fill:FILL[Math.random()*FILL.length|0],edge:EDGE[Math.random()*EDGE.length|0],t:0,life:.55+Math.random()*.6,
+      splat:Math.random()<.18});
+  }
+  let lx=null,ly=null,last=0;
+  addEventListener('pointermove',e=>{ if(document.body.dataset.v!=='999') return;
+    const x=e.clientX,y=e.clientY; if(lx===null){lx=x;ly=y;return}
+    const dx=x-lx,dy=y-ly,d=Math.hypot(dx,dy); const k=Math.min(5,Math.floor(d/14));
+    for(let i=0;i<k;i++){const t=(i+1)/k;spawn(lx+dx*t,ly+dy*t,dx,dy,false)}
+    if(k) {lx=x;ly=y}
+  },{passive:true});
+  addEventListener('pointerdown',e=>{ if(document.body.dataset.v!=='999') return; for(let i=0;i<26;i++)spawn(e.clientX,e.clientY,0,0,true)},{passive:true});
+  function draw(p,s,a){
+    c.save(); c.translate(p.x,p.y); c.rotate(p.rot); c.scale(s,s); c.globalAlpha=a;
+    const path=()=>{c.beginPath();p.pts.forEach((q,i)=>i?c.lineTo(q[0],q[1]):c.moveTo(q[0],q[1]));c.closePath()};
+    // 3D drop shadow, black outline, colour face, halftone, highlight edge
+    c.save(); c.translate(3.5,3.5); path(); c.fillStyle='rgba(5,2,10,.85)'; c.fill(); c.restore();
+    path(); c.lineJoin='miter'; c.lineWidth=3.2; c.strokeStyle='#07030d'; c.stroke();
+    c.fillStyle=p.fill; c.fill(); c.fillStyle=dots; c.fill();
+    c.beginPath(); c.moveTo(p.pts[0][0],p.pts[0][1]); c.lineTo(p.pts[1][0],p.pts[1][1]); c.lineWidth=1.6; c.strokeStyle=p.edge; c.stroke();
+    c.restore();
+  }
+  function frame(now){
+    const dt=Math.min(.05,(now-last)/1000||.016); last=now;
+    c.clearRect(0,0,W,H);
+    for(let i=P.length-1;i>=0;i--){const p=P[i]; p.t+=dt; if(p.t>p.life){P.splice(i,1);continue}
+      p.x+=p.vx; p.y+=p.vy; p.vx*=.95; p.vy=p.vy*.95+.06; p.rot+=p.vr;
+      const k=p.t/p.life, s=k<.12?.4+k/.12*.75:1.15-(k-.12)*.9, a=k<.7?1:1-(k-.7)/.3;
+      if(p.splat){ c.save(); c.globalAlpha=a*.9; c.fillStyle=p.fill; c.strokeStyle='#07030d'; c.lineWidth=2;
+        c.beginPath(); c.arc(p.x,p.y,4*s,0,7); c.fill(); c.stroke(); c.fillRect(p.x-1.2,p.y,2.4,10*k*s); c.restore(); }
+      else draw(p,Math.max(.05,s),a);
+    }
+    requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
 })();
