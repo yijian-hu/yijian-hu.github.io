@@ -851,7 +851,7 @@ canvas.bolt,canvas.pcloud{position:absolute;inset:0;width:100%;height:100%;point
         const e=Math.max(0,Math.min(1,(vh-r.top)/(vh*.85))), u=1-e, u2=u*u, side=P.flip?-1:1;
         if(P.no){P.no.style.translate=(side*u*innerWidth*.45).toFixed(1)+'px '+(d*-.38).toFixed(1)+'px';P.no.style.rotate=(side*u*-25).toFixed(1)+'deg'}
         if(P.hp&&!P.own){P.hp.style.translate=(side*-u2*innerWidth*.18).toFixed(1)+'px '+(d*.07).toFixed(1)+'px';P.hp.style.transform='perspective(1100px) rotateX('+(u*38).toFixed(2)+'deg) rotateY('+(side*u*-14).toFixed(2)+'deg)';P.hp.style.scale=(.7+.3*e).toFixed(3)}
-        if(P.tp) P.tp.style.translate='0 '+(d*-.12).toFixed(1)+'px';
+        if(P.tp) P.tp.style.translate=innerWidth<=860?'':'0 '+(d*-.12).toFixed(1)+'px';   // stacked layout: no drift, or the title slides under the image
         P.lt.forEach(L=>{L.el.style.translate=(L.dx*u2).toFixed(1)+'px '+(L.dy*u2).toFixed(1)+'px';L.el.style.rotate=(L.dr*u2).toFixed(1)+'deg';L.el.style.opacity=Math.min(1,e*1.6).toFixed(2)});
         P.sl.forEach((el,k)=>{const f=Math.max(0,Math.min(1,e*1.25-k*.08)),g=1-f;el.style.translate=(side*(k%2?-1:1)*g*g*180).toFixed(1)+'px 0';el.style.opacity=f.toFixed(2)});
         if(P.wh) P.wh.style.translate=(d*.03).toFixed(1)+'px '+(d*-.06).toFixed(1)+'px';});
@@ -1270,7 +1270,8 @@ void main(){
   atlas(); document.fonts&&document.fonts.ready.then(atlas);
   gl.uniform1i(U.G,0);
   let W=0,H=0,sc=1;
-  function size(){const mob=innerWidth<700;sc=Math.min(devicePixelRatio||1,2)*(mob?.5:.6);W=Math.round(innerWidth*sc);H=Math.round(innerHeight*sc);cv.width=W;cv.height=H;gl.viewport(0,0,W,H)}
+  let q=1;
+  function size(){const mob=innerWidth<700;sc=Math.min(devicePixelRatio||1,2)*(mob?.5:.6)*q;W=Math.round(innerWidth*sc);H=Math.round(innerHeight*sc);cv.width=W;cv.height=H;gl.viewport(0,0,W,H)}
   size(); let lw=innerWidth,lh=innerHeight; addEventListener('resize',()=>{if(Math.abs(innerWidth-lw)>40||Math.abs(innerHeight-lh)>120){lw=innerWidth;lh=innerHeight;size()}});
   const C=(a)=>a.map(x=>x/255);
   const PAL={def:[C([180,107,255]),C([255,77,141]),C([111,214,255])],weather:[C([90,170,255]),C([200,225,255]),C([150,110,255])],
@@ -1287,6 +1288,10 @@ void main(){
   let vis=true; document.addEventListener('visibilitychange',()=>{vis=!document.hidden});
   function frame(now){
     if(vis&&document.body.dataset.v==='999'){
+      // drop the resolution if this device can't keep up
+      if(frame.lt&&now-frame.lt<200){const d=now-frame.lt;frame.n=(frame.n||0)+1;frame.sum=(frame.sum||0)+d;
+        if(frame.n===60){if(frame.sum/60>26&&q>.45){q*=.72;size()}frame.n=0;frame.sum=0}}
+      frame.lt=now;
       const t=now/1000, y=scrollY, dy=y-lastY; lastY=y;
       vel+=(Math.min(1,Math.abs(dy)/60)-vel)*.12;
       scrollAcc+=(y-scrollAcc)*.12;
@@ -1308,50 +1313,6 @@ void main(){
       gl.drawArrays(gl.TRIANGLES,0,3);
     }
     if(!reduce||!frame.once){frame.once=1;requestAnimationFrame(frame)}
-  }
-  requestAnimationFrame(frame);
-})();
-</script>
-<style>
-/* ---------- cursor: ASCII character trail (999 skin) ---------- */
-#shards{position:fixed;inset:0;width:100vw;height:100vh;z-index:45;pointer-events:none;display:none}
-body[data-v="999"] #shards{display:block}
-</style>
-<script>
-(function(){
-  if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const cv=document.createElement('canvas'); cv.id='shards'; cv.setAttribute('aria-hidden','true'); document.body.appendChild(cv);
-  const c=cv.getContext('2d'); let W=0,H=0,dpr=1;
-  function size(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*dpr;cv.height=H*dpr;c.setTransform(dpr,0,0,dpr,0,0)}
-  size(); addEventListener('resize',size);
-  const PAL=['180,107,255','255,77,141','111,214,255','243,238,254'];
-  const GLY='01#%@*+=-:<>/\\|{}[]$&?!アイウエオカキクケコ';
-  const pick=a=>a[Math.random()*a.length|0];
-  const P=[]; const MAX=320;
-  function spawn(x,y,dx,dy,burst){
-    const n=burst?24:Math.min(4,1+Math.hypot(dx,dy)/12|0);
-    for(let i=0;i<n;i++){
-      const a=burst?Math.random()*6.28:Math.atan2(dy,dx)+Math.PI+(Math.random()-.5)*1.2, s=burst?2+Math.random()*5:.4+Math.random()*1.4;
-      P.push({x:x+(Math.random()-.5)*8,y:y+(Math.random()-.5)*8,vx:Math.cos(a)*s,vy:Math.sin(a)*s,ch:pick(GLY),col:pick(PAL),sz:12+Math.random()*16,t:0,life:.7+Math.random()*.6});
-    }
-    if(P.length>MAX) P.splice(0,P.length-MAX);
-  }
-  let lx=null,ly=null,last=0;
-  addEventListener('pointermove',e=>{ if(document.body.dataset.v!=='999') return;
-    const x=e.clientX,y=e.clientY; if(lx===null){lx=x;ly=y;return}
-    spawn(x,y,x-lx,y-ly,false); lx=x; ly=y; },{passive:true});
-  addEventListener('pointerdown',e=>{ if(document.body.dataset.v!=='999') return; spawn(e.clientX,e.clientY,0,0,true)},{passive:true});
-  function frame(now){
-    const dt=Math.min(.05,(now-last)/1000||.016); last=now;
-    c.clearRect(0,0,W,H);
-    if(P.length){ c.save(); c.globalCompositeOperation='lighter'; c.shadowBlur=8;
-      for(let i=P.length-1;i>=0;i--){const p=P[i]; p.t+=dt; if(p.t>p.life){P.splice(i,1);continue}
-        const k=p.t/p.life; if(Math.random()<.15) p.ch=pick(GLY);
-        p.x+=p.vx; p.y+=p.vy; p.vx*=.94; p.vy*=.94;
-        c.globalAlpha=1-k; c.font=`${p.sz}px VT323, monospace`; c.fillStyle=k<.15?'#fff':`rgb(${p.col})`; c.shadowColor=`rgb(${p.col})`;
-        c.fillText(p.ch,p.x,p.y); }
-      c.restore(); }
-    requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
 })();
